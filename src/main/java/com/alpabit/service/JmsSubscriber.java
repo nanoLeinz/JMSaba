@@ -50,26 +50,29 @@ public class JmsSubscriber implements Runnable {
                 TopicSubscriber subscriber =
                         session.createDurableSubscriber(topic, config.getSubscriptionName());
 
-                subscriber.setMessageListener(new MessageListener() {
-                    @Override
-                    public void onMessage(Message msg) {
-                        try {
-                            if (msg instanceof TextMessage) {
-                                String body = ((TextMessage) msg).getText();
-                                log.info("[DURABLE] Received: {}", body);
+                subscriber.setMessageListener(msg -> {
+                    try {
+                        if (msg instanceof TextMessage) {
+                            String body = ((TextMessage) msg).getText();
+                            log.info("[DURABLE] Received: {}", body);
 
-                                // PUSH TO WEBSOCKETS
-                                WebSocketBroadcaster.sendToClients(body);
-
-                            } else {
-                                log.warn("[DURABLE] Non-text message received : {}", msg);
+                            // Offer to queue (non-blocking)
+                            boolean ok = WebSocketBroadcaster.queue.offer(body);
+                            if (!ok) {
+                                log.warn("Queue full, dropping (not acking) so JMS will redeliver");
+                                return; // do not ack
                             }
-                        } catch (Exception e) {
-                            log.error("Message listener error", e);
+
+                            // Acknowledge only after enqueue is successful
+                            msg.acknowledge();
+                        } else {
+                            log.warn("Non-text message: {}", msg);
+                            msg.acknowledge(); // optional
                         }
+                    } catch (Exception e) {
+                        log.error("Listener error", e);
                     }
                 });
-
 
                 connection.start();
                 log.info("Durable subscriber active on {}", config.getDestination());

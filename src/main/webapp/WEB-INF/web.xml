@@ -31,4 +31,12 @@
         <url-pattern>/config/subscriber</url-pattern>
     </servlet-mapping>
 
+    <listener>
+        <listener-class>com.alpabit.web.AppLifecycleListener</listener-class>
+    </listener>
+
+    <context-param>
+        <param-name>weblogic.websocket.tyrus.session-max-idle-timeout</param-name>
+        <param-value>0</param-value>
+    </context-param>
 </web-app>
