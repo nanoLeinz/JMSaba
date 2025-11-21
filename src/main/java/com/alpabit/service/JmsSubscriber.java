@@ -2,6 +2,7 @@ package com.alpabit.service;
 
 import com.alpabit.config.JmsConfig;
 import com.alpabit.util.ContextFactory;
+import com.alpabit.websocket.WebSocketBroadcaster;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,18 +55,21 @@ public class JmsSubscriber implements Runnable {
                     public void onMessage(Message msg) {
                         try {
                             if (msg instanceof TextMessage) {
-                                log.info("[DURABLE] Received: {}", ((TextMessage) msg).getText());
-                                if (msg.propertyExists("MID")) {
-                                    System.out.println("[DURABLE] Message ID: " + msg.getIntProperty("MID"));
-                                }
+                                String body = ((TextMessage) msg).getText();
+                                log.info("[DURABLE] Received: {}", body);
+
+                                // PUSH TO WEBSOCKETS
+                                WebSocketBroadcaster.sendToClients(body);
+
                             } else {
-                                log.warn("[DURABLE] Non-text message received : {}",msg);
+                                log.warn("[DURABLE] Non-text message received : {}", msg);
                             }
                         } catch (Exception e) {
                             log.error("Message listener error", e);
                         }
                     }
                 });
+
 
                 connection.start();
                 log.info("Durable subscriber active on {}", config.getDestination());
