@@ -2,6 +2,7 @@ package com.alpabit.service;
 
 import com.alpabit.config.JmsConfig;
 import com.alpabit.util.ContextFactory;
+import com.alpabit.websocket.WebSocketBroadcaster;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,21 +50,27 @@ public class JmsSubscriber implements Runnable {
                 TopicSubscriber subscriber =
                         session.createDurableSubscriber(topic, config.getSubscriptionName());
 
-                subscriber.setMessageListener(new MessageListener() {
-                    @Override
-                    public void onMessage(Message msg) {
-                        try {
-                            if (msg instanceof TextMessage) {
-                                log.info("[DURABLE] Received: {}", ((TextMessage) msg).getText());
-                                if (msg.propertyExists("MID")) {
-                                    System.out.println("[DURABLE] Message ID: " + msg.getIntProperty("MID"));
-                                }
-                            } else {
-                                log.warn("[DURABLE] Non-text message received : {}",msg);
+                subscriber.setMessageListener(msg -> {
+                    try {
+                        if (msg instanceof TextMessage) {
+                            String body = ((TextMessage) msg).getText();
+                            log.info("[DURABLE] Received: {}", body);
+
+                            // Offer to queue (non-blocking)
+                            boolean ok = WebSocketBroadcaster.queue.offer(body);
+                            if (!ok) {
+                                log.warn("Queue full, dropping (not acking) so JMS will redeliver");
+                                return; // do not ack
                             }
-                        } catch (Exception e) {
-                            log.error("Message listener error", e);
+
+                            // Acknowledge only after enqueue is successful
+                            msg.acknowledge();
+                        } else {
+                            log.warn("Non-text message: {}", msg);
+                            msg.acknowledge(); // optional
                         }
+                    } catch (Exception e) {
+                        log.error("Listener error", e);
                     }
                 });
 
