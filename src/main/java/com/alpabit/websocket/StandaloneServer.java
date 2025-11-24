@@ -1,58 +1,35 @@
 package com.alpabit.websocket;
 
-import org.java_websocket.WebSocket;
-import org.java_websocket.handshake.ClientHandshake;
-import org.java_websocket.server.WebSocketServer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.eclipse.jetty.websocket.api.Session;
+import org.eclipse.jetty.websocket.api.annotations.*;
 
-import java.net.InetSocketAddress;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 
-/**
- * Independent WebSocket Server implementation.
- * Runs on its own port (e.g., 8887) separate from WebLogic's HTTP port.
- */
-public class StandaloneServer extends WebSocketServer {
+@WebSocket
+public class StandaloneServer {
 
-    private static final Logger log = LoggerFactory.getLogger(StandaloneServer.class);
+    private static final Set<Session> sessions = new CopyOnWriteArraySet<>();
 
-    private static final String VALID_PATH = "/jms";
-
-    public StandaloneServer(int port) {
-        super(new InetSocketAddress(port));
+    @OnWebSocketConnect
+    public void onConnect(Session session) {
+        sessions.add(session);
     }
 
-    @Override
-    public void onOpen(WebSocket conn, ClientHandshake handshake) {
-        String path = handshake.getResourceDescriptor(); //
-
-        if (!VALID_PATH.equals(path)) {
-            System.out.println("Rejecting WebSocket connection on invalid path: " + path);
-            conn.close(1002, "Invalid WebSocket endpoint");
-            return;
-        }
-
-        System.out.println("Accepted WebSocket client on path: " + path);
+    @OnWebSocketClose
+    public void onClose(Session session, int status, String reason) {
+        sessions.remove(session);
     }
 
-    @Override
-    public void onClose(WebSocket conn, int code, String reason, boolean remote) {
-        log.info("Closed connection {}: {}", conn.getRemoteSocketAddress(), reason);
+    @OnWebSocketMessage
+    public void onMessage(Session session, String message) {
+        // optional
     }
 
-    @Override
-    public void onMessage(WebSocket conn, String message) {
-        // Handle inbound messages here if needed
-        log.debug("Received message: {}", message);
-    }
-
-    @Override
-    public void onError(WebSocket conn, Exception ex) {
-        log.error("WebSocket error on connection " + (conn != null ? conn.getRemoteSocketAddress() : "unknown"), ex);
-    }
-
-    @Override
-    public void onStart() {
-        log.info("Standalone WebSocket Server started successfully on port {}", getPort());
+    public void broadcast(String msg) {
+        sessions.forEach(s -> {
+            try { s.getRemote().sendString(msg); }
+            catch (Exception ignored) {}
+        });
     }
 }
