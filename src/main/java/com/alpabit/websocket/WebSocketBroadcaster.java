@@ -1,6 +1,5 @@
 package com.alpabit.websocket;
 
-import com.alpabit.websocket.JmsWebSocket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -8,20 +7,23 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
- * Dedicated broadcaster that takes JMS messages from queue
- * and pushes them asynchronously to all WebSocket clients.
- *
- * This ensures JMS listener NEVER blocks, eliminating message loss.
+ * Bridges the JMS Queue and the Standalone WebSocket Server.
+ * Consumes messages from the queue and calls server.broadcast().
  */
 public class WebSocketBroadcaster implements Runnable {
 
     private static final Logger log = LoggerFactory.getLogger(WebSocketBroadcaster.class);
 
-    // Global buffering queue (tune size as needed)
-    public static final BlockingQueue<String> queue =
-            new LinkedBlockingQueue<>(50000);
+    // Shared buffer queue (Must remain static/public so JMS Listeners can find it)
+    public static final BlockingQueue<String> queue = new LinkedBlockingQueue<>(50000);
 
     private volatile boolean running = true;
+    private final StandaloneServer server;
+
+    // Inject the server instance
+    public WebSocketBroadcaster(StandaloneServer server) {
+        this.server = server;
+    }
 
     @Override
     public void run() {
@@ -29,11 +31,12 @@ public class WebSocketBroadcaster implements Runnable {
 
         try {
             while (running) {
-                // Wait until a JMS message is available
+                // 1. Block until a JMS message arrives in the queue
                 String msg = queue.take();
 
-                // Push to websocket using async (non-blocking)
-                JmsWebSocket.broadcastAsync(msg);
+                // 2. Broadcast to all connected clients using the standalone server
+                // This handles the iteration over clients internally
+                server.broadcast(msg);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();

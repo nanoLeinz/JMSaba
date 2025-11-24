@@ -1,7 +1,6 @@
 <web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
          version="3.1">
 
-    <!-- Publisher configuration -->
     <servlet>
         <servlet-name>ConfigController</servlet-name>
         <servlet-class>com.alpabit.web.ConfigController</servlet-class>
@@ -11,7 +10,6 @@
         <url-pattern>/config/jms</url-pattern>
     </servlet-mapping>
 
-    <!-- Publish message endpoint -->
     <servlet>
         <servlet-name>PublishController</servlet-name>
         <servlet-class>com.alpabit.web.PublishController</servlet-class>
@@ -21,7 +19,6 @@
         <url-pattern>/publish</url-pattern>
     </servlet-mapping>
 
-    <!-- Subscriber configuration endpoint -->
     <servlet>
         <servlet-name>SubscriberConfigController</servlet-name>
         <servlet-class>com.alpabit.web.SubscriberConfigController</servlet-class>
@@ -35,8 +32,4 @@
         <listener-class>com.alpabit.web.AppLifecycleListener</listener-class>
     </listener>
 
-    <context-param>
-        <param-name>weblogic.websocket.tyrus.session-max-idle-timeout</param-name>
-        <param-value>0</param-value>
-    </context-param>
 </web-app>
