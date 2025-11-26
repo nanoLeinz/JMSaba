@@ -1,6 +1,10 @@
 package com.alpabit.web;
 
+import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.joran.JoranConfigurator;
+import ch.qos.logback.core.util.StatusPrinter;
 import com.alpabit.config.JmsConfig;
+import com.alpabit.service.JmsConfigService;
 import com.alpabit.service.JmsSubscriber;
 import com.alpabit.websocket.StandaloneServer;
 import com.alpabit.websocket.WebSocketBroadcaster;
@@ -9,8 +13,10 @@ import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
+import java.io.File;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -20,11 +26,10 @@ public class AppLifecycleListener implements ServletContextListener {
 
     private static final Logger log = LoggerFactory.getLogger(AppLifecycleListener.class);
 
-    // Define the port for the independent WebSocket server
-    private static final int WS_PORT = 9002;
+    private static ExecutorService executor;
+    private static Future<?> subscriberFuture;
+    private static JmsSubscriber subscriber;
 
-    private ExecutorService executor;
-    private JmsSubscriber subscriber;
     private WebSocketBroadcaster broadcaster;
     private StandaloneServer wsServer;
 
@@ -32,27 +37,42 @@ public class AppLifecycleListener implements ServletContextListener {
     public void contextInitialized(ServletContextEvent sce) {
         log.info("=== AppLifecycleListener initializing ===");
 
-        executor = Executors.newFixedThreadPool(2);
+        try {
+            File externalConfig = new File("/u01/shares/config/JMSBridge/logback.xml");
 
-        // 1. Initialize and Start Standalone WebSocket Server
-        log.info("Starting Standalone WebSocket Server on port {}", WS_PORT);
-        wsServer = new StandaloneServer(WS_PORT);
+            if (externalConfig.exists()) {
+                LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+                context.reset();
+
+                JoranConfigurator configurator = new JoranConfigurator();
+                configurator.setContext(context);
+                configurator.doConfigure(externalConfig);
+
+                StatusPrinter.printInCaseOfErrorsOrWarnings(context);
+                System.out.println("Loaded external Logback config: " + externalConfig.getAbsolutePath());
+            } else {
+                System.err.println("External Logback config missing: " + externalConfig.getAbsolutePath());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        JmsConfigService.loadConfig();
+
+        //executor = Executors.newFixedThreadPool(2);
+        executor = Executors.newCachedThreadPool();
+
+
+        wsServer = new StandaloneServer();
         wsServer.start();
 
-        // 2. Start Broadcaster (passes messages from Queue -> Server)
         broadcaster = new WebSocketBroadcaster(wsServer);
         executor.submit(broadcaster);
 
-        // 3. Load current subscriber config and start JMS (if valid)
-        JmsConfig cfg = SubscriberConfigController.subscriberConfig;
-        if (cfg != null && cfg.isValidForSubscriber()) {
-            log.info("Starting JMS Subscriber using config: {}", cfg);
-            subscriber = new JmsSubscriber(cfg);
-            executor.submit(subscriber);
-        } else {
-            log.warn("Subscriber not started: No valid config. Hit /config/subscriber first.");
-        }
+        restartSubscriber();
     }
+
+
 
     @Override
     public void contextDestroyed(ServletContextEvent sce) {
@@ -90,5 +110,25 @@ public class AppLifecycleListener implements ServletContextListener {
         }
 
         log.info("=== AppLifecycleListener stopped ===");
+    }
+
+    public static synchronized void restartSubscriber() {
+        JmsConfigService.loadConfig();
+        JmsConfig cfg = JmsConfigService.getJmsConfig();
+
+        if (!cfg.isValidForSubscriber()) {
+            log.warn("No valid JMS config. Subscriber idle.");
+            return;
+        }
+
+        if (subscriberFuture != null && !subscriberFuture.isDone()) {
+            subscriber.stop();
+            subscriberFuture.cancel(true);
+        }
+
+        subscriber = new JmsSubscriber(cfg);
+        subscriberFuture = executor.submit(subscriber);
+
+        log.info("Subscriber restarted using config: {}", cfg);
     }
 }

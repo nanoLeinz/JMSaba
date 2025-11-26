@@ -6,7 +6,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.alpabit</groupId>
     <artifactId>JMSBridge</artifactId>
-    <version>1.3</version>
+    <version>1.0</version>
     <packaging>war</packaging>
 
     <name>JMSBridge</name>

@@ -1,5 +1,6 @@
 package com.alpabit.websocket;
 
+import com.alpabit.service.JmsConfigService;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
@@ -16,10 +17,11 @@ public class StandaloneServer extends WebSocketServer {
 
     private static final Logger log = LoggerFactory.getLogger(StandaloneServer.class);
 
-    private static final String VALID_PATH = "/jms/subscribe";
+    private String VALID_PATH = "/jms/subscribe";
 
-    public StandaloneServer(int port) {
-        super(new InetSocketAddress(port));
+    public StandaloneServer() {
+        super(new InetSocketAddress(JmsConfigService.getWebSocketPort()));
+        this.VALID_PATH = JmsConfigService.getValidPath();
     }
 
     @Override
