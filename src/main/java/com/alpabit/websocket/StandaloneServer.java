@@ -16,7 +16,7 @@ public class StandaloneServer extends WebSocketServer {
 
     private static final Logger log = LoggerFactory.getLogger(StandaloneServer.class);
 
-    private static final String VALID_PATH = "/jms";
+    private static final String VALID_PATH = "/jms/subscribe";
 
     public StandaloneServer(int port) {
         super(new InetSocketAddress(port));
@@ -25,14 +25,14 @@ public class StandaloneServer extends WebSocketServer {
     @Override
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
         String path = handshake.getResourceDescriptor(); //
-
+        log.info("Client trying to connect with path {}",path);
         if (!VALID_PATH.equals(path)) {
-            System.out.println("Rejecting WebSocket connection on invalid path: " + path);
+            log.warn("Rejecting WebSocket connection on invalid path: {} ", path);
             conn.close(1002, "Invalid WebSocket endpoint");
             return;
         }
 
-        System.out.println("Accepted WebSocket client on path: " + path);
+        log.info("Accepted WebSocket client on path: {}", handshake.getResourceDescriptor());
     }
 
     @Override

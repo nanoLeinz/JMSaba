@@ -6,8 +6,6 @@ public class JmsConfig {
     private String connectionFactory;
     private String destination;
     private boolean topic;
-
-    // Durable subscriber fields
     private String clientId;
     private String subscriptionName;
 
@@ -52,9 +50,6 @@ public class JmsConfig {
         this.topic = topic;
     }
 
-    // -----------------------------
-    // Durable Subscriber Get/Set
-    // -----------------------------
     public String getClientId() {
         return clientId;
     }
@@ -71,9 +66,6 @@ public class JmsConfig {
         this.subscriptionName = subscriptionName;
     }
 
-    // -----------------------------
-    // Helper validation methods
-    // -----------------------------
     public boolean isValid() {
         return providerUrl != null && !providerUrl.isEmpty()
                 && connectionFactory != null && !connectionFactory.isEmpty()

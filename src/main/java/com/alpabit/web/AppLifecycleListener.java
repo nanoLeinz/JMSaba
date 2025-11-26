@@ -21,7 +21,7 @@ public class AppLifecycleListener implements ServletContextListener {
     private static final Logger log = LoggerFactory.getLogger(AppLifecycleListener.class);
 
     // Define the port for the independent WebSocket server
-    private static final int WS_PORT = 8887;
+    private static final int WS_PORT = 9002;
 
     private ExecutorService executor;
     private JmsSubscriber subscriber;
@@ -37,7 +37,7 @@ public class AppLifecycleListener implements ServletContextListener {
         // 1. Initialize and Start Standalone WebSocket Server
         log.info("Starting Standalone WebSocket Server on port {}", WS_PORT);
         wsServer = new StandaloneServer(WS_PORT);
-        wsServer.start(); // This spawns its own internal thread
+        wsServer.start();
 
         // 2. Start Broadcaster (passes messages from Queue -> Server)
         broadcaster = new WebSocketBroadcaster(wsServer);

@@ -20,7 +20,6 @@ public class WebSocketBroadcaster implements Runnable {
     private volatile boolean running = true;
     private final StandaloneServer server;
 
-    // Inject the server instance
     public WebSocketBroadcaster(StandaloneServer server) {
         this.server = server;
     }
@@ -32,10 +31,12 @@ public class WebSocketBroadcaster implements Runnable {
         try {
             while (running) {
                 // 1. Block until a JMS message arrives in the queue
+                log.info("Taking msg from queue");
                 String msg = queue.take();
 
                 // 2. Broadcast to all connected clients using the standalone server
                 // This handles the iteration over clients internally
+                log.info("Broadcasting Msg : {}", msg);
                 server.broadcast(msg);
             }
         } catch (InterruptedException e) {

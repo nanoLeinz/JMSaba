@@ -1,31 +1,12 @@
 <web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
          version="3.1">
-
-    <servlet>
-        <servlet-name>ConfigController</servlet-name>
-        <servlet-class>com.alpabit.web.ConfigController</servlet-class>
-    </servlet>
-    <servlet-mapping>
-        <servlet-name>ConfigController</servlet-name>
-        <url-pattern>/config/jms</url-pattern>
-    </servlet-mapping>
-
-    <servlet>
-        <servlet-name>PublishController</servlet-name>
-        <servlet-class>com.alpabit.web.PublishController</servlet-class>
-    </servlet>
-    <servlet-mapping>
-        <servlet-name>PublishController</servlet-name>
-        <url-pattern>/publish</url-pattern>
-    </servlet-mapping>
-
     <servlet>
         <servlet-name>SubscriberConfigController</servlet-name>
         <servlet-class>com.alpabit.web.SubscriberConfigController</servlet-class>
     </servlet>
     <servlet-mapping>
         <servlet-name>SubscriberConfigController</servlet-name>
-        <url-pattern>/config/subscriber</url-pattern>
+        <url-pattern>/config/refresh</url-pattern>
     </servlet-mapping>
 
     <listener>
